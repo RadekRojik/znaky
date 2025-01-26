@@ -14,6 +14,7 @@ Nick,  // vlastní jmenné tvary = zkratky
 poslední tři výčty bude asi lepší sloučit do jednoho vstupu
 seznamy se pak budou prohledávat v pořadí Nick – Name – Alias
 
+
 **********************************************************/
 
 // pracovní definice aby se nezbláznil analyzer
