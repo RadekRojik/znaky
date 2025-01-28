@@ -23,11 +23,13 @@ Seznamy se pak budou prohledávat v pořadí Nick – Name – Alias
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::path::Path;
+// use std::fs::File;
+//use std::path::Path;
 use std::{
-    char, env, fs,
+    char, env, fmt,
+    fs::{self, File},
     io::{self, BufRead, BufReader, Error, ErrorKind},
+    path::Path,
     process::exit,
     str::{Chars, FromStr},
     u32, u8,
@@ -87,6 +89,39 @@ macro_rules! ma_opt {
 /****************************************************************
  * konec maker
 *****************************************************************/
+
+/// Výčet vlastních chyb (čeština je krásná :D )
+#[derive(Debug)]
+enum Chyby {
+    BadChar(String),        // špatný znak
+    BadString(String),      // vstupní údaj nic moc
+    BadNeco,                // Všeobecná chybka
+    NFFile(std::io::Error), // Nenalezení = neotevření souboru
+    NFWord(String),         // Nenalezení hledaného výrazu
+}
+
+// implementace traitu Display na formátování výstupu Chyby
+impl fmt::Display for Chyby {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Chyby::BadChar(_err) => write!(f, "Chybný znak"),
+            Chyby::BadString(_err) => write!(f, "Chybný vstup"),
+            Chyby::BadNeco => write!(f, "Etwa schief gelaufen"),
+            Chyby::NFFile(_err) => write!(f, "Soubor nenalezen"),
+            Chyby::NFWord(err) => write!(f, "{err} nenalezeno"),
+        }
+    }
+}
+
+// implementace traitu Error na Chyby
+impl std::error::Error for Chyby {}
+
+// implementace From = konverze chybových typů
+impl From<std::io::Error> for Chyby {
+    fn from(err: std::io::Error) -> Self {
+        Chyby::NFFile(err)
+    }
+}
 
 // chybové hlášky
 static BADCHAR: &str = "Chybný znak";
@@ -274,10 +309,19 @@ fn main() {
                 println!("{znak}");
             }
             _ => {
-                argument = ma_res!(
-                    jmenne_seznamy(argument, cesta, "UnicodeData.txt"),
-                    "cosi jineho"
-                );
+                // argument = ma_res!(
+                //     jmenne_seznamy(argument, cesta, "UnicodeData.txt"),
+                //     "cosi jineho"
+                // );
+                // let zac = argument.clone();
+                // let zac = &argument;
+                argument = match jmenne_seznamy(argument, cesta, "UnicodeData.txt") {
+                    Ok(i) => i,
+                    Err(e) => {
+                        println!("{e}");
+                        exit(1);
+                    }
+                };
                 codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 16), BADCHAR);
                 znak = ma_opt!(char::from_u32(codepoint), BADSOME);
                 println!("{znak}");
@@ -327,7 +371,7 @@ fn u_literal(retezec: String) -> String {
     ma_res!(std::str::from_utf8(&h), BADSOME).to_string()
 }
 
-fn jmenne_seznamy(slovo: String, cesta: &Path, soubor: &str) -> Result<String, io::Error> {
+fn jmenne_seznamy(slovo: String, cesta: &Path, soubor: &str) -> Result<String, Chyby> {
     // Načtení slova ze vstupu
     // println!("Zadejte slovo k hledání:");
     // let mut hledane_slovo = String::new();
@@ -368,6 +412,6 @@ fn jmenne_seznamy(slovo: String, cesta: &Path, soubor: &str) -> Result<String, i
         }
     }
 
-    Err(Error::new(ErrorKind::NotFound, NOTFOUND))
+    Err(Chyby::NFWord(slovo))
     // println!("Slovo '{}' nebylo nalezeno.", hledane_slovo);
 }
