@@ -11,21 +11,23 @@ Name,  // jmenná hodnota extrahovaná z autority:
 Alias,  // staré jmenné tvary
 Nick,  // vlastní jmenné tvary = zkratky
 
-poslední tři výčty bude asi lepší sloučit do jednoho vstupu
-seznamy se pak budou prohledávat v pořadí Nick – Name – Alias
+Poslední tři výčty bude asi lepší sloučit do jednoho vstupu
+Seznamy se pak budou prohledávat v pořadí Nick – Name – Alias
 
 
 **********************************************************/
 
 // pracovní definice aby se nezbláznil analyzer
-// #![allow(dead_code, unused_macros, unused_imports)]
+#![allow(dead_code, unused_macros, unused_imports)]
 // #![allow(unused_variables, unused_mut)]
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::path::Path;
 use std::{
     char, env, fs,
-    io::{self, BufRead},
+    io::{self, BufRead, BufReader, Error, ErrorKind},
     process::exit,
     str::{Chars, FromStr},
     u32, u8,
@@ -90,6 +92,8 @@ macro_rules! ma_opt {
 static BADCHAR: &str = "Chybný znak";
 static BADSTRING: &str = "Chybný vstup";
 static BADSOME: &str = "Oops";
+static NOTFOUND: &str = "Nenalezeno";
+static BADUNIFILE: &str = "Chybí soubor ~/.config/unitochar/UnicodeData.txt";
 
 /// hexa literal to nibble
 ///
@@ -181,10 +185,11 @@ impl Default for Data {
 /// `parsetoml` načte základní prefixy. Pokud existuje configurační soubor,
 /// načte prefixy z něho.
 /// ` `
-fn parsetoml() -> Data {
+fn parsetoml(config_path: &Path) -> Data {
     // vytvoření proměnné `config_file` s adresou configuračního souboru
-    let mut config_file = env::var("HOME").unwrap_or("none".to_string());
-    config_file.push_str("/.config/unitochar/config.toml");
+    // let mut config_file = env::var("HOME").unwrap_or("none".to_string());
+    // config_file.push_str("/.config/unitochar/config.toml");
+    let config_file = Path::join(config_path, "config.toml");
     // Načtení souboru do proměnné `contents`
     let contents = match fs::read_to_string(config_file) {
         // Při úspěchu obsahuje `contents` obsah souboru
@@ -211,8 +216,12 @@ fn parsetoml() -> Data {
  */
 
 fn main() {
+    let mut config_path = env::var("HOME").unwrap_or("none".to_string());
+    config_path.push_str("/.config/unitochar/");
+    let cesta = Path::new(config_path.as_str());
+
     // vytvoření instance prefixů
-    let datika = parsetoml().prefixy;
+    let datika = parsetoml(cesta).prefixy;
 
     let mut predpony = vec![
         datika.unicode.as_str(),
@@ -265,10 +274,18 @@ fn main() {
                 println!("{znak}");
             }
             _ => {
-                // pokud není prefix, pracuj jako s dekadickým vstupem
-                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 10), BADCHAR);
+                argument = ma_res!(
+                    jmenne_seznamy(argument, cesta, "UnicodeData.txt"),
+                    "cosi jineho"
+                );
+                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 16), BADCHAR);
                 znak = ma_opt!(char::from_u32(codepoint), BADSOME);
                 println!("{znak}");
+
+                // pokud není prefix, pracuj jako s dekadickým vstupem
+                // codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 10), BADCHAR);
+                // znak = ma_opt!(char::from_u32(codepoint), BADSOME);
+                // println!("{znak}");
             }
         }
 
@@ -308,4 +325,49 @@ fn u_literal(retezec: String) -> String {
     }
     let h = Bytes::from(vys);
     ma_res!(std::str::from_utf8(&h), BADSOME).to_string()
+}
+
+fn jmenne_seznamy(slovo: String, cesta: &Path, soubor: &str) -> Result<String, io::Error> {
+    // Načtení slova ze vstupu
+    // println!("Zadejte slovo k hledání:");
+    // let mut hledane_slovo = String::new();
+    // io::stdin().read_line(&mut hledane_slovo)?;
+    let hledane_slovo = slovo.trim().to_lowercase(); // Odstranění bílých znaků
+
+    // Cesta k souboru
+    //let cesta_k_souboru = Path::new("jmena.csv");
+    let cesta_k_souboru = Path::join(cesta, soubor); // "UnicodeData.txt");
+
+    // Otevření souboru
+    let soubor = File::open(&cesta_k_souboru)?;
+    //  {
+    //     Ok(i) => i,
+    //     _ => return BADUNIFILE.to_string(),
+    // };
+
+    let reader = BufReader::new(soubor);
+
+    // Prohledávání souboru
+    for (_index, radek) in reader.lines().enumerate() {
+        let mut radek = radek?;
+        radek = radek.to_lowercase();
+        if radek.contains(&hledane_slovo) {
+            // let mut vystup = String::new();
+            // println!(
+            //     "Slovo '{}' nalezeno na řádku {}: {}",
+            //     hledane_slovo,
+            //     index + 1,
+            //     radek
+            let vystup = match radek.split_once(";") {
+                Some((i, _)) => i.to_string(),
+                _ => "".to_string(),
+            };
+            return Ok(vystup);
+            // break;
+            // );
+        }
+    }
+
+    Err(Error::new(ErrorKind::NotFound, NOTFOUND))
+    // println!("Slovo '{}' nebylo nalezeno.", hledane_slovo);
 }
