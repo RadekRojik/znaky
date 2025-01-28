@@ -8,6 +8,7 @@ přidat Vstupní hodnoty:
 
 Name,  // jmenná hodnota extrahovaná z autority:
        // https://www.unicode.org/reports/tr44/#UnicodeData.txt
+       // https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
 Alias,  // staré jmenné tvary
 Nick,  // vlastní jmenné tvary = zkratky
 
@@ -18,17 +19,19 @@ Seznamy se pak budou prohledávat v pořadí Nick – Name – Alias
 **********************************************************/
 
 // pracovní definice aby se nezbláznil analyzer
-#![allow(dead_code, unused_macros, unused_imports)]
+// #![allow(dead_code, unused_macros, unused_imports)]
 // #![allow(unused_variables, unused_mut)]
+
+mod knihovny;
+use knihovny as k;
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 // use std::fs::File;
 //use std::path::Path;
 use std::{
-    char, env, fmt,
-    fs::{self, File},
-    io::{self, BufRead, BufReader, Error, ErrorKind},
+    char, env, fs,
+    io::{self, BufRead},
     path::Path,
     process::exit,
     str::{Chars, FromStr},
@@ -58,6 +61,7 @@ macro_rules! ma_res {
             Ok(i) => i,
             _ => {
                 eprintln!("{}", $hlaska);
+                // k::Chyby::BadString($hlaska.to_string());
                 exit(1);
             }
         }
@@ -80,6 +84,7 @@ macro_rules! ma_opt {
             Some(i) => i,
             None => {
                 eprintln!("{}", $hlaska);
+                // k::Chyby::BadString($hlaska.to_string());
                 exit(1);
             }
         }
@@ -89,46 +94,12 @@ macro_rules! ma_opt {
 /****************************************************************
  * konec maker
 *****************************************************************/
-
-/// Výčet vlastních chyb (čeština je krásná :D )
-#[derive(Debug)]
-enum Chyby {
-    BadChar(String),        // špatný znak
-    BadString(String),      // vstupní údaj nic moc
-    BadNeco,                // Všeobecná chybka
-    NFFile(std::io::Error), // Nenalezení = neotevření souboru
-    NFWord(String),         // Nenalezení hledaného výrazu
-}
-
-// implementace traitu Display na formátování výstupu Chyby
-impl fmt::Display for Chyby {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Chyby::BadChar(_err) => write!(f, "Chybný znak"),
-            Chyby::BadString(_err) => write!(f, "Chybný vstup"),
-            Chyby::BadNeco => write!(f, "Etwa schief gelaufen"),
-            Chyby::NFFile(_err) => write!(f, "Soubor nenalezen"),
-            Chyby::NFWord(err) => write!(f, "{err} nenalezeno"),
-        }
-    }
-}
-
-// implementace traitu Error na Chyby
-impl std::error::Error for Chyby {}
-
-// implementace From = konverze chybových typů
-impl From<std::io::Error> for Chyby {
-    fn from(err: std::io::Error) -> Self {
-        Chyby::NFFile(err)
-    }
-}
-
 // chybové hlášky
 static BADCHAR: &str = "Chybný znak";
 static BADSTRING: &str = "Chybný vstup";
 static BADSOME: &str = "Oops";
-static NOTFOUND: &str = "Nenalezeno";
-static BADUNIFILE: &str = "Chybí soubor ~/.config/unitochar/UnicodeData.txt";
+// static NOTFOUND: &str = "Nenalezeno";
+// static BADUNIFILE: &str = "Chybí soubor ~/.config/unitochar/UnicodeData.txt";
 
 /// hexa literal to nibble
 ///
@@ -315,7 +286,7 @@ fn main() {
                 // );
                 // let zac = argument.clone();
                 // let zac = &argument;
-                argument = match jmenne_seznamy(argument, cesta, "UnicodeData.txt") {
+                argument = match k::jmenne_seznamy(argument, cesta, "UnicodeData.txt") {
                     Ok(i) => i,
                     Err(e) => {
                         println!("{e}");
@@ -369,49 +340,4 @@ fn u_literal(retezec: String) -> String {
     }
     let h = Bytes::from(vys);
     ma_res!(std::str::from_utf8(&h), BADSOME).to_string()
-}
-
-fn jmenne_seznamy(slovo: String, cesta: &Path, soubor: &str) -> Result<String, Chyby> {
-    // Načtení slova ze vstupu
-    // println!("Zadejte slovo k hledání:");
-    // let mut hledane_slovo = String::new();
-    // io::stdin().read_line(&mut hledane_slovo)?;
-    let hledane_slovo = slovo.trim().to_lowercase(); // Odstranění bílých znaků
-
-    // Cesta k souboru
-    //let cesta_k_souboru = Path::new("jmena.csv");
-    let cesta_k_souboru = Path::join(cesta, soubor); // "UnicodeData.txt");
-
-    // Otevření souboru
-    let soubor = File::open(&cesta_k_souboru)?;
-    //  {
-    //     Ok(i) => i,
-    //     _ => return BADUNIFILE.to_string(),
-    // };
-
-    let reader = BufReader::new(soubor);
-
-    // Prohledávání souboru
-    for (_index, radek) in reader.lines().enumerate() {
-        let mut radek = radek?;
-        radek = radek.to_lowercase();
-        if radek.contains(&hledane_slovo) {
-            // let mut vystup = String::new();
-            // println!(
-            //     "Slovo '{}' nalezeno na řádku {}: {}",
-            //     hledane_slovo,
-            //     index + 1,
-            //     radek
-            let vystup = match radek.split_once(";") {
-                Some((i, _)) => i.to_string(),
-                _ => "".to_string(),
-            };
-            return Ok(vystup);
-            // break;
-            // );
-        }
-    }
-
-    Err(Chyby::NFWord(slovo))
-    // println!("Slovo '{}' nebylo nalezeno.", hledane_slovo);
 }
