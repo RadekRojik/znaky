@@ -23,7 +23,7 @@ Seznamy se pak budou prohledávat v pořadí Nick – Name – Alias
 // #![allow(unused_variables, unused_mut)]
 
 mod knihovny;
-use knihovny as k;
+use knihovny::{self as k, Chyby};
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -60,8 +60,7 @@ macro_rules! ma_res {
         match $co {
             Ok(i) => i,
             _ => {
-                eprintln!("{}", $hlaska);
-                // k::Chyby::BadString($hlaska.to_string());
+                eprintln!("{}", HYHY); // k::Chyby::BadString($hlaska.to_string()));
                 exit(1);
             }
         }
@@ -83,8 +82,7 @@ macro_rules! ma_opt {
         match $co {
             Some(i) => i,
             None => {
-                eprintln!("{}", $hlaska);
-                // k::Chyby::BadString($hlaska.to_string());
+                eprintln!("{}", HYHY); // k::Chyby::BadString($hlaska.to_string()));
                 exit(1);
             }
         }
@@ -95,9 +93,10 @@ macro_rules! ma_opt {
  * konec maker
 *****************************************************************/
 // chybové hlášky
-static BADCHAR: &str = "Chybný znak";
-static BADSTRING: &str = "Chybný vstup";
-static BADSOME: &str = "Oops";
+// static BADCHAR: &str = "Chybný znak";
+static BADSTRING: &str = "Chybka";
+// static BADSOME: &str = "Oops";
+static HYHY: Chyby = k::Chyby::BadNeco;
 // static NOTFOUND: &str = "Nenalezeno";
 // static BADUNIFILE: &str = "Chybí soubor ~/.config/unitochar/UnicodeData.txt";
 
@@ -114,8 +113,8 @@ static BADSOME: &str = "Oops";
 /// exit with 1
 /// ` `
 fn char_to_nibble(qq: char) -> u8 {
-    let t = ma_opt!(qq.to_digit(16), BADCHAR); // převod na hex číslo
-    let r = ma_res!(u8::try_from(t), BADCHAR); // převod na Byte
+    let t = ma_opt!(qq.to_digit(16), HYHY); // převod na hex číslo
+    let r = ma_res!(u8::try_from(t), HYHY); // převod na Byte
     r // návratová hodnota
 }
 
@@ -123,7 +122,7 @@ fn char_to_nibble(qq: char) -> u8 {
 ///
 /// ` `
 fn vrat_znak(mm: &mut Chars) -> char {
-    let k = ma_opt!(mm.next(), BADSTRING);
+    let k = ma_opt!(mm.next(), HYHY);
     k // návratová hodnota
 }
 
@@ -222,6 +221,7 @@ fn parsetoml(config_path: &Path) -> Data {
  */
 
 fn main() {
+    // let blabla = k::Chyby::BadChar(String::from("ch znak"));
     let mut config_path = env::var("HOME").unwrap_or("none".to_string());
     config_path.push_str("/.config/unitochar/");
     let cesta = Path::new(config_path.as_str());
@@ -261,22 +261,22 @@ fn main() {
         match neco {
             val if val == &datika.unicode => {
                 // codepoint vstup
-                argument = ma_opt!(argument.strip_prefix(val), BADSOME).to_string();
-                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 16), BADCHAR);
-                znak = ma_opt!(char::from_u32(codepoint), BADSOME);
+                argument = ma_opt!(argument.strip_prefix(val), HYHY).to_string();
+                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 16), blabla);
+                znak = ma_opt!(char::from_u32(codepoint), HYHY);
                 println!("{znak}");
             }
             val if val == &datika.utf => {
                 // utf8 vstup
-                argument = ma_opt!(argument.strip_prefix(val), BADSOME).to_string();
+                argument = ma_opt!(argument.strip_prefix(val), HYHY).to_string();
                 znak = char::from_str(u_literal(argument).as_str()).unwrap();
                 println!("{znak}");
             }
             val if val == &datika.decim => {
                 // dekadický vstup
-                argument = ma_opt!(argument.strip_prefix(val), BADSOME).to_string();
-                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 10), BADCHAR);
-                znak = ma_opt!(char::from_u32(codepoint), BADSOME);
+                argument = ma_opt!(argument.strip_prefix(val), HYHY).to_string();
+                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 10), blabla);
+                znak = ma_opt!(char::from_u32(codepoint), HYHY);
                 println!("{znak}");
             }
             _ => {
@@ -293,8 +293,8 @@ fn main() {
                         exit(1);
                     }
                 };
-                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 16), BADCHAR);
-                znak = ma_opt!(char::from_u32(codepoint), BADSOME);
+                codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 16), blabla);
+                znak = ma_opt!(char::from_u32(codepoint), HYHY);
                 println!("{znak}");
 
                 // pokud není prefix, pracuj jako s dekadickým vstupem
@@ -326,7 +326,7 @@ fn u_literal(retezec: String) -> String {
                                    // hodnoty jednotlivých byte
     let mut znaky: Chars = retezec.chars(); // řetězec "rozbijem" na znaky
                                             //let pocetznaku = retezec.chars().count();
-    let pocetznaku = ma_res!(chars_count(retezec.clone()), BADSOME);
+    let pocetznaku = ma_res!(chars_count(retezec.clone()), HYHY);
 
     for _ in 0..pocetznaku {
         let firs_char = vrat_znak(&mut znaky); // v ll je znak reprezentující první nibble
@@ -339,5 +339,5 @@ fn u_literal(retezec: String) -> String {
                                                 // println!("{} {} = {}", first_nibble, second_nibble, i); // testovací mezivýpis
     }
     let h = Bytes::from(vys);
-    ma_res!(std::str::from_utf8(&h), BADSOME).to_string()
+    ma_res!(std::str::from_utf8(&h), HYHY).to_string()
 }
