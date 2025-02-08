@@ -1,6 +1,7 @@
-mod chybky;
-pub use chybky::Chyby;
+// mod chybky;
+// pub use chybky::Chyby;
 
+pub use crate::chybky::Chyby;
 use std::{
     fs::File,
     io::{BufRead, BufReader},

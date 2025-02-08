@@ -22,8 +22,14 @@ Seznamy se pak budou prohledávat v pořadí Nick – Name – Alias
 // #![allow(dead_code, unused_macros, unused_imports)]
 // #![allow(unused_variables, unused_mut)]
 
-mod knihovny;
-use knihovny::{self as k, Chyby};
+// mod ecka;
+// mod knihovny;
+// use knihovny::{self as k, Chyby};
+mod chybky;
+use crate::chybky::Chyby;
+
+mod mi;
+// use crate::mi::*;
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -96,7 +102,8 @@ macro_rules! ma_opt {
 // static BADCHAR: &str = "Chybný znak";
 static BADSTRING: &str = "Chybka";
 // static BADSOME: &str = "Oops";
-static HYHY: Chyby = k::Chyby::BadNeco;
+// static HYHY: Chyby = k::Chyby::BadNeco;
+static HYHY: Chyby = mi::Chyby::BadNeco;
 // static NOTFOUND: &str = "Nenalezeno";
 // static BADUNIFILE: &str = "Chybí soubor ~/.config/unitochar/UnicodeData.txt";
 
@@ -223,7 +230,7 @@ fn parsetoml(config_path: &Path) -> Data {
 fn main() {
     // let blabla = k::Chyby::BadChar(String::from("ch znak"));
     let mut config_path = env::var("HOME").unwrap_or("none".to_string());
-    config_path.push_str("/.config/unitochar/");
+    config_path.push_str("/.config/znaky/");
     let cesta = Path::new(config_path.as_str());
 
     // vytvoření instance prefixů
@@ -286,7 +293,7 @@ fn main() {
                 // );
                 // let zac = argument.clone();
                 // let zac = &argument;
-                argument = match k::jmenne_seznamy(argument, cesta, "UnicodeData.txt") {
+                argument = match mi::jmenne_seznamy(argument, cesta, "UnicodeData.txt") {
                     Ok(i) => i,
                     Err(e) => {
                         println!("{e}");
