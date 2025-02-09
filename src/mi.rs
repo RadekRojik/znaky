@@ -34,7 +34,7 @@ pub fn jmenne_seznamy(slovo: String, cesta: &Path, soubor: &str) -> Result<Strin
         let mut radek = radek?;
         radek = radek.to_lowercase(); // Převede obsah řádku na malé písmena
                                       // jestli se najde hledaný řetězec vrátí hodnotu
-        if let Some(vystup) = csv_parser(radek, &hledane_slovo) {
+        if let Some(vystup) = csv_line_parser(radek, &hledane_slovo) {
             return Ok(vystup);
         };
     }
@@ -46,7 +46,7 @@ pub fn jmenne_seznamy(slovo: String, cesta: &Path, soubor: &str) -> Result<Strin
 // funkce parsuje csv radek. Hledá ve druhém sloupci frázi.
 // Při úspěchu vrací její unicode hodnotu (první sloupec)
 // Jinak vrací none
-fn csv_parser(line: String, fraze: &String) -> Option<String> {
+fn csv_line_parser(line: String, fraze: &String) -> Option<String> {
     let radek: String = line;
     let mezikus: Vec<&str> = radek.split(DELIM).collect();
     if mezikus[HLEDANY_SLOUPEC].contains(fraze) {

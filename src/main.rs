@@ -105,7 +105,7 @@ static BADSTRING: &str = "Chybka";
 // static HYHY: Chyby = k::Chyby::BadNeco;
 static HYHY: Chyby = mi::Chyby::BadNeco;
 // static NOTFOUND: &str = "Nenalezeno";
-// static BADUNIFILE: &str = "Chybí soubor ~/.config/unitochar/UnicodeData.txt";
+// static BADUNIFILE: &str = "Chybí soubor ~/.config/znaky/UnicodeData.txt";
 
 /// hexa literal to nibble
 ///
@@ -291,15 +291,13 @@ fn main() {
                 //     jmenne_seznamy(argument, cesta, "UnicodeData.txt"),
                 //     "cosi jineho"
                 // );
-                // let zac = argument.clone();
+                let zac: String = String::from(argument);
                 // let zac = &argument;
-                argument = match mi::jmenne_seznamy(argument, cesta, "UnicodeData.txt") {
-                    Ok(i) => i,
-                    Err(e) => {
-                        println!("{e}");
-                        exit(1);
-                    }
-                };
+
+                argument = mi::jmenne_seznamy(zac.clone(), cesta, "mujslovnik.txt")
+                    .or_else(|_| mi::jmenne_seznamy(zac.clone(), cesta, "UnicodeData.txt"))
+                    .unwrap_or_else(|_| "".to_string());
+
                 codepoint = ma_res!(u32::from_str_radix(argument.as_str(), 16), blabla);
                 znak = ma_opt!(char::from_u32(codepoint), HYHY);
                 println!("{znak}");
